@@ -1,0 +1,40 @@
+clientns="test-client"
+clientif=$clientns
+serverns="test-server"
+serverif=$serverns
+ENCODED_AFTR_FQDN="04:61:66:74:72:05:6d:61:6c:74:65:02:70:6c:00" 
+
+# setup the network namespaces
+ip netns add $serverns
+ip netns add $clientns
+
+# add veth device
+ip link add dev $serverif type veth peer name $clientif
+
+# add the veth device endpoints to the appropriate network namespace
+ip link set $clientif netns $clientns
+ip link set $serverif netns $serverns
+
+# enable the loopback interfaces
+ip netns exec $clientns ip link set lo up
+ip netns exec $serverns ip link set lo up
+
+# configure the static ip addresses on the interface where dnsmasq will be run
+ip netns exec $serverns ip address add 192.0.2.1/24 dev $serverif
+ip netns exec $serverns ip address add 2001:db8::1/64 dev $serverif
+
+# activate the interface
+ip netns exec $serverns ip link set $serverif up
+
+# start dnsmasq as the DHCP server and DNS resolver
+ip netns exec $serverns \
+    dnsmasq -d \
+    --dhcp-range=lan,192.0.2.100,192.0.2.200,10m \
+    --enable-ra --dhcp-range=lan,2001:db8::1:0,2001:db8::2:0,10m \
+    --dhcp-option=option6:64,${ENCODED_AFTR_FQDN}
+
+# in another window execute the dhcp client of choice (e.g. dhclient)
+clientns="test-client"
+clientif=$clientns
+ip netns exec $clientns \
+    dhclient -6  -v $clientif

@@ -1,0 +1,15 @@
+#!/bin/bash
+# put this file under /etc/dhcpcd.exit-hook and mark as executable (chmod +x ...)
+# the aftr-name is stored under $new_dhcp6_aftr_name
+
+# Only execute on specific occasions
+case $reason in
+	BOUND6|EXPIRE6|REBIND6|REBOOT6|RENEW6)
+	  if "$interface" = "$wan_interface" ]; then
+	  	# act on the aftr_name by calling another script that creates the DS-Lite tunnel
+	  	establish-ds-lite-tunnel $wan_interface $new_dhcp6_aftr_name
+	  else
+	  	echo "WRONG INTERFACE"
+	  fi
+	;;
+esac

@@ -1,0 +1,35 @@
+#!/bin/bash
+interface=$1
+aftr_name=$2
+tunnel_interface="dslite0"
+# please choose any private ipv4 address that is not used on any other interface
+private_addr_for_traffic_originating_from_router="192.168.77.1"
+
+if [ -z "$interface" ]
+then
+    echo "Usage: $0 <interface> <aftr_name>"
+    exit 1
+fi
+
+# if the aftr_name is empty or cannot be resolved, delete existing tunnel and exit
+if [ -z "$aftr_name" ]
+then
+    # delete existing tunnel
+    ip link set $tunnel_interface down
+    ip -6 tunnel del $tunnel_interface >/dev/null 2>&1
+else
+    # check if a tunnel exists
+    # if not, create a new tunnel
+    existing_tunnel=$(ip -6 tunnel show | grep $tunnel_interface)
+    if [ -z "$existing_tunnel" ]
+    then
+        local=$(ip -6 addr show $interface | grep inet6 | awk -F '[ \t]+|/' '{print $3}' | grep -v '^\(::1\|fe80\)' | head -n1)
+        aftr_addr=$(host -t AAAA $aftr_name | awk '/has IPv6 address/ { print $5; exit }')
+        ip -6 tunnel add $tunnel_interface mode ipip6 local $local remote $aftr_addr
+        ip link set $tunnel_interface up
+        ip addr add 192.0.0.2/29 dev $tunnel_interface
+        # needed to route traffic originating from the B4 correctly
+        ip addr add ${private_addr_for_traffic_originating_from_router}/32 dev $tunnel_interface
+        ip route add default via 192.0.0.1 dev $tunnel_interface src $private_addr_for_traffic_originating_from_router
+    fi
+fi

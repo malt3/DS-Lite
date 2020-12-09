@@ -1,0 +1,12 @@
+clientns="test-client"
+clientif=$clientns
+
+# create all the required files and folders for a namespaced dhcp client
+mkdir -p /tmp/dhclient
+touch /tmp/dhclient/dhclient.leases
+touch /tmp/dhclient/dhclient.pid
+chmod o+r -R /tmp/dhclient
+chmod o+w -R /tmp/dhclient
+
+ip netns exec $clientns \
+    dhclient -6 -v -d -cf dhclient.conf -lf /tmp/dhclient/dhclient.leases -pf /tmp/dhclient/dhclient.pid $clientif

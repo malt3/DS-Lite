@@ -1,0 +1,13 @@
+# place this file under /etc/systemd/network/
+# This does not yet include settings for static assignments or DHCPv6 Prefix Delegation
+# The DHCPv6 Response option are not exposed so we need a separate sniffer script to actually obtain the AFTR name
+
+[Match]
+# Replace with your WAN interface name
+Name=enp0s3
+
+[Network]
+DHCP=yes
+
+[DHCPv6]
+RequestOptions=64

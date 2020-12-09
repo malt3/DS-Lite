@@ -1,0 +1,1 @@
+This is just a collection of scripts and configuration files I use to configure DS-Lite on different Linux distributions.
